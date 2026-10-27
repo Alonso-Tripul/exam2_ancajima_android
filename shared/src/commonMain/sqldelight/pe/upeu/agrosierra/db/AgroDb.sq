@@ -25,6 +25,8 @@ CREATE TABLE meta (
     valor TEXT NOT NULL
 );
 
+CREATE INDEX lote_filtro_offline ON lote(campaniaCerrada, valle);
+
 observarLotes:
 SELECT * FROM lote
 WHERE (:busqueda = '' OR lower(codigo) LIKE '%' || lower(:busqueda) || '%' OR lower(nombre) LIKE '%' || lower(:busqueda) || '%')
