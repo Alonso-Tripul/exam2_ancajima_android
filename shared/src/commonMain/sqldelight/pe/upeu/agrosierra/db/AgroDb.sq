@@ -1,0 +1,79 @@
+CREATE TABLE lote (
+    id INTEGER NOT NULL PRIMARY KEY,
+    codigo TEXT NOT NULL,
+    nombre TEXT NOT NULL,
+    hectareas REAL NOT NULL,
+    cultivo TEXT NOT NULL,
+    valle TEXT NOT NULL,
+    campaniaCerrada INTEGER NOT NULL,
+    dosisMaxima REAL NOT NULL
+);
+
+CREATE TABLE labor (
+    id INTEGER NOT NULL PRIMARY KEY,
+    loteId INTEGER NOT NULL,
+    tipo TEXT NOT NULL,
+    fecha TEXT NOT NULL,
+    responsable TEXT NOT NULL,
+    cantidad REAL NOT NULL,
+    observacion TEXT NOT NULL,
+    pendiente INTEGER NOT NULL
+);
+
+CREATE TABLE meta (
+    clave TEXT NOT NULL PRIMARY KEY,
+    valor TEXT NOT NULL
+);
+
+CREATE INDEX lote_filtro_offline ON lote(campaniaCerrada, valle);
+
+observarLotes:
+SELECT * FROM lote
+WHERE (:busqueda = '' OR lower(codigo) LIKE '%' || lower(:busqueda) || '%' OR lower(nombre) LIKE '%' || lower(:busqueda) || '%')
+  AND (:valleFiltro = '' OR valle = :valleFiltro)
+  AND (:soloAbiertas = 0 OR campaniaCerrada = 0)
+ORDER BY codigo;
+
+obtenerLote:
+SELECT * FROM lote WHERE id = ?;
+
+upsertLote:
+INSERT OR REPLACE INTO lote(id, codigo, nombre, hectareas, cultivo, valle, campaniaCerrada, dosisMaxima)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+cerrarLoteLocal:
+UPDATE lote SET campaniaCerrada = 1 WHERE id = ?;
+
+observarLaboresPorLote:
+SELECT * FROM labor WHERE loteId = ? ORDER BY fecha DESC, id DESC;
+
+obtenerLabor:
+SELECT * FROM labor WHERE id = ?;
+
+laboresPendientes:
+SELECT * FROM labor WHERE pendiente = 1 ORDER BY id ASC;
+
+contarPendientesPorLote:
+SELECT COUNT(*) FROM labor WHERE loteId = ? AND pendiente = 1;
+
+siguienteIdLocal:
+SELECT COALESCE(MIN(id), 0) AS minId FROM labor;
+
+insertarLabor:
+INSERT OR REPLACE INTO labor(id, loteId, tipo, fecha, responsable, cantidad, observacion, pendiente)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+actualizarLaborLocal:
+UPDATE labor SET tipo = ?, fecha = ?, cantidad = ?, observacion = ?, pendiente = ? WHERE id = ?;
+
+eliminarLaborLocal:
+DELETE FROM labor WHERE id = ?;
+
+guardarMeta:
+INSERT OR REPLACE INTO meta(clave, valor) VALUES (?, ?);
+
+ultimaSincronizacion:
+SELECT valor FROM meta WHERE clave = 'ultima_sync';
+
+limpiarTodo:
+DELETE FROM labor;
